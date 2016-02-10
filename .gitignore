@@ -1,0 +1,6 @@
+*.pyc
+*~
+*.csv
+.ipynb_checkpoints
+Data
+caffe-cifar-100-example/cifar*
