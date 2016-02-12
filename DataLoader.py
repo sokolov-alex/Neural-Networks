@@ -75,7 +75,6 @@ def load_cifar(datapath = 'Data', url = 'http://www.cs.toronto.edu/~kriz/cifar-1
            Xt, yt_c, yt_f
 
 
-
 class mnist():
     def __init__(self):
         pass
