@@ -5,7 +5,7 @@ layer {
   top: "label_coarse"
   top: "label_fine"
   hdf5_data_param {
-    source: "test300.txt"
+    source: "test.txt"
     batch_size: 128
   }
 }
