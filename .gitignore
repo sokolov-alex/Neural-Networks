@@ -7,3 +7,9 @@ caffe-cifar-100-example/cifar*
 .*
 *.caffemodel
 *.solverstate
+
+*.mid
+*.pkl
+Final\ Project/biaxial-rnn-music-composition/music/*
+Final\ Project/biaxial-rnn-music-composition/output/*
+*.zip
