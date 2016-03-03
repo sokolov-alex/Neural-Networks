@@ -59,10 +59,10 @@ def midiToNoteStateMatrix(midifile):
 
         time += 1
 
-    return statematrix
+    return statematrix[::-1]
 
 def noteStateMatrixToMidi(statematrix, name="example"):
-    statematrix = numpy.asarray(statematrix)
+    statematrix = numpy.asarray(statematrix)[::-1]
     pattern = midi.Pattern()
     track = midi.Track()
     pattern.append(track)

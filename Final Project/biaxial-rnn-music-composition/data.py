@@ -1,4 +1,5 @@
 import itertools
+import numpy
 from midi_to_statematrix import upperBound, lowerBound
 
 def startSentinel():
@@ -51,4 +52,4 @@ def noteStateMatrixToInputForm(statematrix):
     # NOTE: May have to transpose this or transform it in some way to make Theano like it
     #[startSentinel()] + 
     inputform = [ noteStateSingleToInputForm(state,time) for time,state in enumerate(statematrix) ]
-    return inputform
+    return numpy.array(inputform)
