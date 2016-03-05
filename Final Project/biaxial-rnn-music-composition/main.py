@@ -41,7 +41,7 @@ def fetch_train_thoughts(m, pcs, batches, name="trainthoughts"):
 
 
 if __name__ == '__main__':
-    pcs = multi_training.loadPieces("music")
+    pcs = multi_training.loadPieces('music/pieces.pkl')
 
     m = model.Model([300, 300], [100, 50], dropout=0.5)
 

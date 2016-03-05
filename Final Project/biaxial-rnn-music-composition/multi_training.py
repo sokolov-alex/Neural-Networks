@@ -7,7 +7,7 @@ import cPickle as pickle
 
 import signal
 
-batch_width = 10 # number of sequences in a batch
+batch_width = 8 # number of sequences in a batch
 batch_len = 16*8 # length of each sequence
 division_len = 16 # interval between possible start locations
 
@@ -17,7 +17,7 @@ def loadPieces(dirpath, music_path = 'music/pieces.pkl'):
 
     if os.path.exists(music_path):
         print 'Loaded preprocessed notes...'
-        return pickle.load(open("music/pieces.pkl", "rb"))
+        return pickle.load(open(music_path, "rb"))
     else:
         for fname in os.listdir(dirpath):
             if fname[-4:] not in ('.mid','.MID'):
@@ -32,7 +32,7 @@ def loadPieces(dirpath, music_path = 'music/pieces.pkl'):
             pieces[name] = outMatrix
             print "Loaded {}".format(name)
 
-        pickle.dump(pieces, open("music/pieces.pkl", "wb"))
+        pickle.dump(pieces, open(music_path, "wb"))
 
     return numpy.array(pieces)
 
@@ -62,8 +62,7 @@ def trainPiece(model,pieces,epochs, notesToInput = None, start=0, input_path = '
     else:
         notes_to_input = pickle.load(open(input_path, "rb"))'''
     global notes_to_input
-    if notesToInput:
-        notes_to_input = notesToInput
+    notes_to_input = notesToInput
 
     stopflag = [False]
     def signal_handler(signame, sf):
