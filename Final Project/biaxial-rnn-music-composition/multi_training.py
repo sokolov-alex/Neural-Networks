@@ -11,13 +11,13 @@ batch_width = 8 # number of sequences in a batch
 batch_len = 16*8 # length of each sequence
 division_len = 16 # interval between possible start locations
 
-def loadPieces(dirpath, music_path = 'music/pieces.pkl'):
+def loadPieces(dirpath='music', pieces_fname ='/pieces.pkl'):
 
     pieces = {}
-
-    if os.path.exists(music_path):
+    pieces_fname = dirpath+pieces_fname
+    if os.path.exists(pieces_fname):
         print 'Loaded preprocessed notes...'
-        return pickle.load(open(music_path, "rb"))
+        return pickle.load(open(pieces_fname, "rb"))
     else:
         for fname in os.listdir(dirpath):
             if fname[-4:] not in ('.mid','.MID'):
@@ -32,9 +32,9 @@ def loadPieces(dirpath, music_path = 'music/pieces.pkl'):
             pieces[name] = outMatrix
             print "Loaded {}".format(name)
 
-        pickle.dump(pieces, open(music_path, "wb"))
+        pickle.dump(pieces, open(pieces_fname, "wb"))
 
-    return numpy.array(pieces)
+    return pieces
 
 def getPieceSegment(pieces):
     idx = random.choice(range(len(pieces)))
