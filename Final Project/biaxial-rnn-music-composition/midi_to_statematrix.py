@@ -1,4 +1,4 @@
-import midi, numpy
+import midi, numpy as np
 
 lowerBound = 24
 upperBound = 102
@@ -40,9 +40,9 @@ def midiToNoteStateMatrix(midifile):
                         else:
                             state[evt.pitch-lowerBound] = [1, 1]
                 elif isinstance(evt, midi.TimeSignatureEvent):
-                    if evt.numerator not in (2, 4):
+                    if evt.numerator not in (2, 3, 4):
                         # We don't want to worry about non-4 time signatures. Bail early!
-                        # print "Found time signature event {}. Bailing!".format(evt)
+                        #print "Found time signature event {}. Bailing!".format(evt)
                         return statematrix
 
                 try:
@@ -59,10 +59,10 @@ def midiToNoteStateMatrix(midifile):
 
         time += 1
 
-    return statematrix[::-1]
+    return np.array(statematrix)#[::-1]
 
 def noteStateMatrixToMidi(statematrix, name="example"):
-    statematrix = numpy.asarray(statematrix)[::-1]
+    statematrix = np.asarray(statematrix)#[::-1]
     pattern = midi.Pattern()
     track = midi.Track()
     pattern.append(track)

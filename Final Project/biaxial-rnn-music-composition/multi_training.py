@@ -6,6 +6,7 @@ from data import *
 import cPickle as pickle
 
 import signal
+import numpy as np
 
 batch_width = 8 # number of sequences in a batch
 batch_len = 16*8 # length of each sequence
@@ -15,23 +16,27 @@ def loadPieces(dirpath='music', pieces_fname ='/pieces.pkl'):
 
     pieces = {}
     pieces_fname = dirpath+pieces_fname
+    ignores = 0
     if os.path.exists(pieces_fname):
         print 'Loaded preprocessed notes...'
         return pickle.load(open(pieces_fname, "rb"))
     else:
         for fname in os.listdir(dirpath):
-            if fname[-4:] not in ('.mid','.MID'):
+            if fname.lower()[-4:] != '.mid':
                 continue
 
             name = fname[:-4]
 
             outMatrix = midiToNoteStateMatrix(os.path.join(dirpath, fname))
             if len(outMatrix) < batch_len:
+                #outMatrix = midiToNoteStateMatrix(os.path.join(dirpath, fname))
+                print '------------------------- bailing outMatrix length: ', len(outMatrix)
+                ignores += 1
                 continue
 
             pieces[name] = outMatrix
             print "Loaded {}".format(name)
-
+        print 'Total ignored: {}'.format(ignores)
         pickle.dump(pieces, open(pieces_fname, "wb"))
 
     return pieces
@@ -43,10 +48,11 @@ def getPieceSegment(pieces):
     # print "Range is {} {} {} -> {}".format(0,len(piece_output)-batch_len,division_len, start)
 
     seg_out = piece_output[start:start+batch_len]
-    if notes_to_input:
+    '''if notes_to_input:
         seg_in = notes_to_input[idx][start:start+batch_len]
     else:
-        seg_in = noteStateMatrixToInputForm(seg_out)
+        seg_in = noteStateMatrixToInputForm(seg_out)'''
+    seg_in = noteStateMatrixToInputForm(seg_out)
     # 128 1980 = 253440   vs   128 78 2 = 19968     vs 128 78 80 = 798720
     return seg_in, seg_out
 
@@ -54,26 +60,25 @@ def getPieceBatch(pieces):
     i,o = zip(*[getPieceSegment(pieces) for _ in range(batch_width)])
     return numpy.array(i), numpy.array(o)
 
-def trainPiece(model,pieces,epochs, notesToInput = None, start=0, input_path = 'music/notes_to_input.pkl'):
-    '''global notes_to_input
-    if not os.path.isfile(input_path):
-        notes_to_input = noteStateMatrixToInputForm(pieces.values())
-        pickle.dump(notes_to_input,open(input_path, 'wb'))
-    else:
-        notes_to_input = pickle.load(open(input_path, "rb"))'''
-    global notes_to_input
-    notes_to_input = notesToInput
+def trainPiece(model,pieces,epochs, notesToInput = None, start=0):
+    #global notes_to_input
+    #notes_to_input = notesToInput
+
+    f1=open('output/outputs.txt', 'w+')
 
     stopflag = [False]
     def signal_handler(signame, sf):
         stopflag[0] = True
     old_handler = signal.signal(signal.SIGINT, signal_handler)
-    for i in range(start,start+epochs):
+    for i in range(start,start+epochs[0]):
         if stopflag[0]:
             break
         error = model.update_fun(*getPieceBatch(pieces))
         if i % 100 == 0:
-            print "epoch {}, error={}".format(i,error)
+            output_log = "epoch {}, error={}".format(epochs[1] + i,error)
+            print output_log
+            print >> f1, output_log
+
         if i % 500 == 0 or (i % 100 == 0 and i < 1000):
             xIpt, xOpt = map(numpy.array, getPieceSegment(pieces))
             t = datetime.now()
