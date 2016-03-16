@@ -32,9 +32,12 @@ def gen_adaptive(m, pcs, times, keep_thoughts=False, name="final", rbm = False):
         if keep_thoughts:
             all_thoughts.append(resdata)
     if rbm:
-        from RBM import rbm_reconstruction
-        rbm_outputs = rbm_reconstruction(np.array(pcs.values()), np.array(all_outputs), window_len = 16,
-                                         learning_rate=0.1, training_epochs=15, batch_size=20, n_hidden=1500)
+        if False:
+            pickle.dump(np.array(all_outputs), open('output/composition.sm', 'wb'))
+        else:
+            from RBM import rbm_reconstruction
+            rbm_outputs = rbm_reconstruction(np.array(pcs.values()), np.array(all_outputs), window_len = 16,
+                                             learning_rate=0.1, training_epochs=1, batch_size=20, n_hidden=1500)
         noteStateMatrixToMidi(np.array(rbm_outputs), 'output/' + name + ' rbm')
     noteStateMatrixToMidi(np.array(all_outputs), 'output/' + name)
     if keep_thoughts:
@@ -56,8 +59,11 @@ if __name__ == '__main__':
 
     pieces = multi_training.loadPieces(dirpath = path)
 
-    rbm_outputs = rbm_reconstruction(np.array(pieces.values()), np.array(pieces.values()), window_len = 16,
-                                         learning_rate=0.1, training_epochs=15, batch_size=20, n_hidden=1500)
+    all_outputs = pickle.load(open('output/composition.sm', 'rb'))
+    rbm_outputs = rbm_reconstruction(np.array(pieces.values()), np.array(all_outputs), window_len= 16,
+                                             learning_rate=0.1, training_epochs=1, batch_size=20, n_hidden=15)
+
+
 
     m = model.Model([300, 300], [100, 50], dropout=0.5)
 

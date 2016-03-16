@@ -43,7 +43,7 @@ def midiToNoteStateMatrix(midifile):
                     if evt.numerator not in (2, 3, 4):
                         # We don't want to worry about non-4 time signatures. Bail early!
                         #print "Found time signature event {}. Bailing!".format(evt)
-                        return statematrix
+                        return np.array(statematrix)#[::-1]
 
                 try:
                     timeleft[i] = track[pos + 1].tick
