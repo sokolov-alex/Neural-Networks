@@ -30,7 +30,7 @@ def loadPieces(dirpath='music', pieces_fname ='/pieces.pkl'):
             outMatrix = midiToNoteStateMatrix(os.path.join(dirpath, fname))
             if len(outMatrix) < batch_len:
                 #outMatrix = midiToNoteStateMatrix(os.path.join(dirpath, fname))
-                print '------------------------- bailing outMatrix length: ', len(outMatrix)
+                print('------------------------- bailing outMatrix length: ', len(outMatrix))
                 ignores += 1
                 continue
 
@@ -82,6 +82,6 @@ def trainPiece(model,pieces,epochs, notesToInput = None, start=0):
         if i % 500 == 0 or (i % 100 == 0 and i < 1000):
             xIpt, xOpt = map(numpy.array, getPieceSegment(pieces))
             t = datetime.now()
-            noteStateMatrixToMidi(numpy.concatenate((numpy.expand_dims(xOpt[0], 0), model.predict_fun(batch_len, 1, xIpt[0])), axis=0),'output/sample{0}_{1}:{2}'.format(i, t.hour, t.minute))
-            pickle.dump(model.learned_config,open('output/params{}.p'.format(i), 'wb'))
+            noteStateMatrixToMidi(numpy.concatenate((numpy.expand_dims(xOpt[0], 0), model.predict_fun(batch_len, 1, xIpt[0])), axis=0),'output/sample{0}_{1}:{2}'.format(epochs[1] + i, t.hour, t.minute))
+            pickle.dump(model.learned_config,open('output/params{}.p'.format(epochs[1] + i), 'wb'))
     signal.signal(signal.SIGINT, old_handler)

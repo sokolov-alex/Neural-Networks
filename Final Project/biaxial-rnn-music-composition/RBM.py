@@ -10,6 +10,8 @@ from __future__ import print_function
 import random
 import timeit
 
+from datetime import datetime
+
 try:
     import PIL.Image as Image
 except ImportError:
@@ -356,12 +358,20 @@ class RBM(object):
 
         return cross_entropy
 
-def rbm_reconstruction(train_data, output_data, window_len = 16, learning_rate=0.1, training_epochs=15, batch_size=20, n_hidden=1500):
 
+def share_data(data):
+    shared_ = theano.shared(np.asarray(data, dtype=theano.config.floatX), borrow=True)
+    return shared_#T.cast(shared_, 'float32')
+
+def rbm_reconstruction(train_data, output_data, window_len = 16, learning_rate=0.1, training_epochs=15, batch_size=20, n_hidden=1500):
+    trained_rbm = rbm_train(train_data, window_len, learning_rate, training_epochs, batch_size, n_hidden)
+    return rbm_reconstruct(trained_rbm, output_data, window_len)
+
+def rbm_train(train_data, window_len = 16, learning_rate=0.1, training_epochs=15, batch_size=20, n_hidden=1500, rbm = None):
     # allocate symbolic variables for the data
     index = T.lscalar()
     x = T.matrix('x')  # the data is presented as rasterized images
-
+    beat_stride = 78*2
     rng = np.random.RandomState(123)
     theano_rng = RandomStreams(rng.randint(2 ** 30))
 
@@ -369,7 +379,7 @@ def rbm_reconstruction(train_data, output_data, window_len = 16, learning_rate=0
     persistent_chain = theano.shared(np.zeros((batch_size, n_hidden), dtype=theano.config.floatX), borrow=True)
 
     # construct the RBM class
-    rbm = RBM(input=x, n_visible=window_len*78*2,
+    rbm = RBM(input=x, n_visible=window_len*beat_stride,
               n_hidden=n_hidden, numpy_rng=rng, theano_rng=theano_rng)
 
     # get the cost and the gradient corresponding to one step of CD-15
@@ -385,25 +395,24 @@ def rbm_reconstruction(train_data, output_data, window_len = 16, learning_rate=0
     # it is ok for a theano function to have no output
     # the purpose of train_rbm is solely to update the RBM parameters
 
-    def share_batches(data):
-        data = data.reshape((-1,78*2))
-        data = np.array([data[idx:idx+window_len] for idx in range(len(data)-window_len)])
-        data = data.reshape((-1,16*78*2))
-        shared_ = theano.shared(np.asarray(data, dtype=theano.config.floatX), borrow=True)
+
+    def share_train(data):
+        shared_ = share_data(make_windows(data))
         return shared_
 
-    def share_data(data, borrow=True):
-        data = data.reshape((-1,78*2))
-        shared_ = theano.shared(np.asarray(data, dtype=theano.config.floatX), borrow=borrow)
-        return shared_ #T.cast(shared_, 'int32')
+    def make_windows(data):
+        data = data.reshape((-1, 78 * 2))
+        data = np.array([data[idx:idx + window_len] for idx in range(len(data) - window_len)])
+        data = data.reshape((-1, 16 * 78 * 2))
+        return data.astype('float32')
 
-    train_set = share_batches(train_data[0])
+    train_set = share_train(train_data[0])
 
     train_rbm = theano.function(
         [index],
         cost,
         updates=updates,
-        givens={ #TODO: ********************** make sure edge indexes fit into train and output!!!!!!!!!!!!!
+        givens={
             x: train_set[index:index+batch_size]
         },
         name='train_rbm'
@@ -417,33 +426,43 @@ def rbm_reconstruction(train_data, output_data, window_len = 16, learning_rate=0
     for epoch in range(training_epochs):
         # go through the training set
         mean_cost = []
-        for t in range(0,len(train_data)): #TODO: start from 0 or 1?
-            train_set = share_batches(train_data[t]) #TODO: check if train_rbm uses new value or old reference
+        for t in range(0,len(train_data)):
+            #tm = datetime.now()
+            train_set.set_value(make_windows(train_data[t]))
+            #print('Time wasted on data compilation :', datetime.now()-tm)
             idxs = train_data[t].shape[0]
             for idx in range(0,idxs-batch_size,batch_size):
                 mean_cost += [train_rbm(idx)]
                 #idx = random.choice(range(len(train_set)))
                 #piece_output = train_set.values()[idx]
                 #start = random.randrange(0,len(piece_output)-window_len,division_len)
-
-        print('Training epoch %d, cost is ' % epoch, np.mean(mean_cost))
+            if t % 25 == 0:
+                tm = datetime.now()
+                print('         +25 files trained on, time (m:s) - {0}:{1}'.format(tm.minute, tm.second))
+        tm = datetime.now()
+        print('Training epoch {0}, cost is {1}, time (m:s) - {2}:{3}'.format(epoch, np.mean(mean_cost), tm.minute, tm.second))
 
     end_time = timeit.default_timer()
 
     pretraining_time = (end_time - start_time)
 
     print ('Training took %f minutes' % (pretraining_time / 60.))
+    return rbm
 
+def rbm_reconstruct(rbm, output_data, window_len):
     # end-snippet-5 start-snippet-6
     #################################
     #     Sampling from the RBM     #
     #################################
     # find out the number of test samples
+    beat_stride = 78*2
+    output_data = output_data.reshape((-1)).astype('float32')
     output_set = share_data(output_data)
+
     # start from the first output to initialize the persistent chain with
     cur_window = theano.shared(
         np.asarray(
-            output_set.get_value(borrow=True)[:window_len],
+            output_set.get_value(borrow=True)[:window_len*beat_stride],
             dtype=theano.config.floatX
         )
     )
@@ -467,10 +486,11 @@ def rbm_reconstruction(train_data, output_data, window_len = 16, learning_rate=0
         outputs_info=[None, None, None, None, None, cur_window],
         n_steps=n_gibbs_steps
     )
-
-    cur = window_len-1
+    cur = theano.shared((window_len-1)*beat_stride, borrow=True)
     # add to updates the shared variable that takes care of our persistent chain :.
-    updates.update({cur_window: vis_samples[-1][1:] + output_set[cur]}) #TODO: bring cur into theano, make sure update is using it
+    # y.shape.eval(x=numpy.random.rand(...))
+    updates.update({cur_window: T.concatenate([vis_samples[-1][beat_stride:], output_set[cur:cur+beat_stride]], axis=0)})
+    #TODO: bring cur into theano, make sure update is using it
     # construct the function that implements our persistent chain.
     # we generate the "mean field" activations for plotting and the actual
     # samples for reinitializing the state of our persistent chain
@@ -483,15 +503,19 @@ def rbm_reconstruction(train_data, output_data, window_len = 16, learning_rate=0
         updates=updates,
         name='sample_fn'
     )
-
+    output_data_discrete = np.zeros(output_data.shape)
     output_length = output_set.get_value(borrow=True).shape[0]
     #output = np.zeros(output_set)
-    for i in range(output_length-window_len):
+    for i in range(0,output_length-window_len*beat_stride,beat_stride):
         vis_sample = sample_fn()
-        output_data[cur:cur+window_len] = vis_sample
-        cur += 1
-
-    return output_set.reshape(-1,78,2)
-
-if __name__ == '__main__':
-    rbm_reconstruction()
+        print(output_data_discrete.shape)
+        if i == 0:
+            output_data_discrete[:window_len*beat_stride] = vis_sample[1]
+        else:
+            output_data_discrete[i+(window_len-1)*beat_stride:i+window_len*beat_stride] = vis_sample[1][-beat_stride:]
+        output_data[i:i+window_len*beat_stride] = vis_sample[1]
+        cur.set_value(cur.get_value()+beat_stride)
+        #if i % beat_stride*500 == 0:
+        tm = datetime.now()
+        print('RBM reconstruction: {0}/{1}. Time (m:s) - {2}:{3}'.format(i, output_length-window_len*beat_stride, tm.minute, tm.second))
+    return output_data.reshape(-1,78,2), output_data_discrete.reshape(-1,78,2)
