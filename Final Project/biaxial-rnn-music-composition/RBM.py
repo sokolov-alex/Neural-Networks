@@ -486,7 +486,6 @@ def rbm_reconstruct(rbm, output_data, window_len):
         outputs_info=[None, None, None, None, None, cur_window],
         n_steps=n_gibbs_steps
     )
-
     # add to updates the shared variable that takes care of our persistent chain :.
     # y.shape.eval(x=numpy.random.rand(...))
     #updates.update({cur_window: output_set[cur:cur+window_len*beat_stride]})
@@ -504,16 +503,17 @@ def rbm_reconstruct(rbm, output_data, window_len):
     )
     output_data_discrete = np.zeros(output_data.shape)
     output_length = output_set.get_value(borrow=True).shape[0]
-    for cur in range(0,output_length-window_len*beat_stride,beat_stride*window_len):
+    #output = np.zeros(output_set)
+    for cur in range(0,output_length-window_len*beat_stride,window_len*beat_stride):
         vis_sample = sample_fn()
+        print(output_data_discrete.shape)
         if cur == 0:
             output_data_discrete[:window_len*beat_stride] = vis_sample[1]
         else:
-            output_data_discrete[cur+(window_len-1)*beat_stride:cur+window_len*beat_stride] = vis_sample[1][-beat_stride:]
+            output_data_discrete[cur:cur+window_len*beat_stride] = vis_sample[1]
         output_data[cur:cur+window_len*beat_stride] = vis_sample[1]
         cur_window.set_value(np.asarray(output_set.get_value(borrow=True)[cur:cur+window_len*beat_stride],dtype=theano.config.floatX))
-        #if cur % beat_stride*500 == 0:
-        tm = datetime.now()
-        if cur % 20*beat_stride == 0:
-            print('RBM reconstruction: {0}/{1}. Time (m:s) - {2}:{3}'.format(cur, output_length-window_len*beat_stride, tm.minute, tm.second))
+        #if i % beat_stride*500 == 0:
+    tm = datetime.now()
+    print('RBM reconstruction: {0}/{1}. Time (m:s) - {2}:{3}'.format(cur, output_length-window_len*beat_stride, tm.minute, tm.second))
     return output_data.reshape(-1,78,2), output_data_discrete.reshape(-1,78,2)
